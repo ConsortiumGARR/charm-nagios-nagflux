@@ -1,19 +1,17 @@
 name: nagios-nagflux
-summary: <Fill in summary here>
-maintainer: Ubuntu <Ubuntu@clajujuplayground>
+summary: Nagflux
+maintainer: Claudio Pisa <csd-support@garr.it>
 description: |
-  <Multi-line description here>
+  From Nagios to InfluxDB
 tags:
-  # Replace "misc" with one or more whitelisted tags from this list:
-  # https://jujucharms.com/docs/stable/authors-charm-metadata
-  - misc
-subordinate: false
-provides:
-  provides-relation:
-    interface: interface-name
+  - monitoring
+series:
+  - focal
+  - bionic
+subordinate: true
 requires:
-  requires-relation:
-    interface: interface-name
-peers:
-  peer-relation:
-    interface: interface-name
+  juju-info:
+    interface: juju-info
+    scope: container
+  influxdb-api:
+    interface: influxdb-api
