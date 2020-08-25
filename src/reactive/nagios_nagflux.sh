@@ -50,6 +50,11 @@ function configure-nagflux() {
     mkdir -p /var/lib/nagios3/spool/nagfluxperfdata
     chown nagios:nagios /var/lib/nagios3/spool/nagfluxperfdata
 
+    LIVESTATUS_SOCKET=$( grep livestatus /etc/nagios3/nagios.cfg | awk '{print $2}' )
+    if [ ! -S "$LIVESTATUS_SOCKET" ]; then
+        status-set error "Nagios livestatus not enabled"
+    fi
+
     cat <<EOF > /opt/nagflux/config.gcfg
 [main]
     NagiosSpoolfileFolder = "/var/lib/nagios3/spool/nagfluxperfdata"
@@ -71,7 +76,7 @@ function configure-nagflux() {
     # tcp or file
     Type = "tcp"
     # tcp: 127.0.0.1:6557 or file /var/run/live
-    Address = "/var/lib/nagios3/livestatus/socket"
+    Address = "${LIVESTATUS_SOCKET}"
     # The amount to minutes to wait for livestatus to come up, if set to 0 the detection is disabled
     MinutesToWait = 2
     # Set the Version of Livestatus. Allowed are Nagios, Icinga2, Naemon.
