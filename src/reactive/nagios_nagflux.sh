@@ -52,7 +52,7 @@ function configure-nagflux() {
 
     LIVESTATUS_SOCKET=$( grep livestatus /etc/nagios3/nagios.cfg | awk '{print $2}' )
     if [ ! -S "$LIVESTATUS_SOCKET" ]; then
-        status-set error "Nagios livestatus not enabled"
+        status-set blocked "Nagios livestatus not enabled"
     fi
 
     cat <<EOF > /opt/nagflux/config.gcfg
