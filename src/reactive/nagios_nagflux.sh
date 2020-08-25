@@ -104,7 +104,7 @@ EOF
     grep process-host-perfdata-file-nagflux /etc/nagios3/nagios.cfg || cat ${CHARM_DIR}/templates/10-nagflux-perfdata.cfg >> /etc/nagios3/nagios.cfg
     cp -f ${CHARM_DIR}/templates/20-nagflux-commands.cfg /etc/nagios3/conf.d/
 
-    nagflux_restart
+    systemctl restart nagflux.service
 
     if /usr/sbin/nagios3 -v /etc/nagios3/nagios.cfg; then
         systemctl restart nagios3.service
@@ -113,10 +113,5 @@ EOF
         status-set error "Nagios configuration error"
     fi
 }
-
-function nagflux_restart() {
-    systemctl restart nagflux.service
-}
-
 
 reactive_handler_main
