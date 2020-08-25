@@ -104,7 +104,7 @@ function configure-nagflux() {
     StopPullingDataIfDown = false
 EOF
 
-    sed -i 's/^process_performance_data=0/process_performance_data=1/g' /etc/nagios3/nagios.cfg
+    sed -i 's/^process_performance_data=./process_performance_data=1/g' /etc/nagios3/nagios.cfg
 
     grep process-host-perfdata-file-nagflux /etc/nagios3/nagios.cfg || cat ${CHARM_DIR}/templates/10-nagflux-perfdata.cfg >> /etc/nagios3/nagios.cfg
     cp -f ${CHARM_DIR}/templates/20-nagflux-commands.cfg /etc/nagios3/conf.d/
@@ -117,6 +117,22 @@ EOF
     else
         status-set error "Nagios configuration error"
     fi
+}
+
+@hook start
+function nagflux_start() {
+    systemctl restart nagflux.service
+        status-set active
+}
+
+@hook stop
+function nagflux_stop() {
+    systemctl stop nagflux.service
+    systemctl disable nagflux.service
+    rm -rf /opt/nagflux
+    rm -f /etc/nagios3/conf.d/20-nagflux-commands.cfg
+    sed -i 's/^process_performance_data=./process_performance_data=0/g' /etc/nagios3/nagios.cfg
+    systemctl restart nagios3.service
 }
 
 reactive_handler_main
