@@ -37,11 +37,19 @@ function install_nagios-nagflux() {
 
     status-set blocked "Relation with influxdb missing"
     charms.reactive set_state 'nagios-nagflux.installed'
+    set_flag nagflux_installed
 }
 
-@hook influxdb-api-relation-changed
+
+@hook influxdb-api-relation-joined
+function set_influxdb_api_changed_flag() {
+    clear_flag influxdb_configured
+}
+
+@when_not influxdb_configured
+@when nagflux_installed influxdb-api.available
 function configure-nagflux() {
-    status-set maintenance "configuring"
+    status-set maintenance "configuring nagflux"
     INFLUXDB_HOSTNAME=$(relation-get hostname)
     INFLUXDB_PORT=$(relation-get port)
     INFLUXDB_USERNAME=$(relation-get user)
@@ -103,36 +111,64 @@ function configure-nagflux() {
     Arguments = "precision=ms&u=${INFLUXDB_USERNAME}&p=${INFLUXDB_PASSWORD}&db=fast"
     StopPullingDataIfDown = false
 EOF
+    systemctl restart nagflux.service
+    set_flag influxdb_configured
 
+}
+
+@when influxdb_configured
+@when_not nagios_configured
+function configure_nagios() {
+    status-set maintenance "configuring nagios"
     sed -i 's/^process_performance_data=./process_performance_data=1/g' /etc/nagios3/nagios.cfg
 
     grep process-host-perfdata-file-nagflux /etc/nagios3/nagios.cfg || cat ${CHARM_DIR}/templates/10-nagflux-perfdata.cfg >> /etc/nagios3/nagios.cfg
     cp -f ${CHARM_DIR}/templates/20-nagflux-commands.cfg /etc/nagios3/conf.d/
 
-    systemctl restart nagflux.service
-
     if /usr/sbin/nagios3 -v /etc/nagios3/nagios.cfg; then
         systemctl restart nagios3.service
+        set_flag nagios_configured
         status-set active
     else
         status-set error "Nagios configuration error"
     fi
 }
 
+@hook influxdb-api-relation-departed
+function clear_influxdb_configured_flag() {
+    clear_flag influxdb_configured
+    clear_flag nagios_configured
+}
+
 @hook start
 function nagflux_start() {
     systemctl restart nagflux.service
-        status-set active
+    status-set active
 }
 
 @hook stop
 function nagflux_stop() {
+    clear_flag influxdb_configured
+    clear_flag nagios_configured
+    clear_flag nagflux_installed
     systemctl stop nagflux.service
     systemctl disable nagflux.service
     rm -rf /opt/nagflux
     rm -f /etc/nagios3/conf.d/20-nagflux-commands.cfg
     sed -i 's/^process_performance_data=./process_performance_data=0/g' /etc/nagios3/nagios.cfg
     systemctl restart nagios3.service
+}
+
+@hook update-status
+function set_update_status_called_flag() {
+    set_flag update_status_called
+}
+
+@when update_status_called influxdb_configured nagios_configured
+function nagflux_update_status() {
+    systemctl status nagflux.service || clear_flag influxdb_configured
+    grep '^process_performance_data=0' && clear_flag nagios_configured
+    clear_flag update_status_called
 }
 
 reactive_handler_main
