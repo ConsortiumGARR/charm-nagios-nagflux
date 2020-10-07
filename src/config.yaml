@@ -1,1 +1,9 @@
+options:
+  external_influxdb_address:
+    type: string
+    default: ""
+    description: |
+        URL of an external InfluxDB instance, e.g. http://user:pass@example.com:8086
 
+        This option is intended as an alternative to adding a relation between
+        this charm and the influxdb charm.

@@ -46,14 +46,31 @@ function set_influxdb_api_changed_flag() {
     clear_flag influxdb_configured
 }
 
+@hook config-changed
+function set_influxdb_configuration_changed_flag() {
+    clear_flag influxdb_configured
+}
+
 @when_not influxdb_configured
-@when nagflux_installed influxdb-api.available
+@when nagflux_installed
+@when_any influxdb-api.available config.set.external_influxdb_address
 function configure-nagflux() {
+    INFLUXDB_HOST_URL="$(config-get external_influxdb_address)"
+    
+    if [ -z "$INFLUXDB_HOST_URL" ]; then
+        if ! relation-get hostname; then
+            status-set blocked "InfluxDB not configured"
+            return
+        fi
+        INFLUXDB_HOSTNAME=$(relation-get hostname)
+        INFLUXDB_PORT=$(relation-get port)
+        INFLUXDB_USERNAME=$(relation-get user)
+        INFLUXDB_PASSWORD=$(relation-get password)
+        #XXX username and password from an influxdb charm are not used
+        INFLUXDB_HOST_URL="http://${INFLUXDB_HOSTNAME}:${INFLUXDB_PORT}"
+    fi
+
     status-set maintenance "configuring nagflux"
-    INFLUXDB_HOSTNAME=$(relation-get hostname)
-    INFLUXDB_PORT=$(relation-get port)
-    INFLUXDB_USERNAME=$(relation-get user)
-    INFLUXDB_PASSWORD=$(relation-get password)
 
     mkdir -p /var/lib/nagios3/spool/nagfluxperfdata
     chown nagios:nagios /var/lib/nagios3/spool/nagfluxperfdata
@@ -100,15 +117,15 @@ function configure-nagflux() {
 [InfluxDB "nagflux"]
     Enabled = true
     Version = 1.0
-    Address = "http://${INFLUXDB_HOSTNAME}:${INFLUXDB_PORT}"
-    Arguments = "precision=ms&u=${INFLUXDB_USERNAME}&p=${INFLUXDB_PASSWORD}&db=nagflux"
+    Address = "${INFLUXDB_HOST_URL}"
+    Arguments = "precision=ms&db=nagflux"
     StopPullingDataIfDown = true
 
 [InfluxDB "fast"]
     Enabled = false
     Version = 1.0
-    Address = "http://${INFLUXDB_HOSTNAME}:${INFLUXDB_PORT}"
-    Arguments = "precision=ms&u=${INFLUXDB_USERNAME}&p=${INFLUXDB_PASSWORD}&db=fast"
+    Address = "${INFLUXDB_HOST_URL}"
+    Arguments = "precision=ms&db=fast"
     StopPullingDataIfDown = false
 EOF
     systemctl restart nagflux.service
