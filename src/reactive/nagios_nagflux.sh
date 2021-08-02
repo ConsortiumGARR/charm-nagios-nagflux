@@ -184,7 +184,7 @@ function set_update_status_called_flag() {
 @when update_status_called influxdb_configured nagios_configured
 function nagflux_update_status() {
     systemctl status nagflux.service || clear_flag influxdb_configured
-    grep '^process_performance_data=0' && clear_flag nagios_configured
+    grep '^process_performance_data=0' /etc/nagios3/nagios.cfg && clear_flag nagios_configured
     clear_flag update_status_called
 }
 
