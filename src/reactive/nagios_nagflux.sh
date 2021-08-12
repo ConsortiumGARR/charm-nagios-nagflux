@@ -124,8 +124,8 @@ function configure-nagflux() {
 
 EOF
     systemctl restart nagflux.service
+    status-set active
     set_flag influxdb_configured
-
 }
 
 @when influxdb_configured
@@ -180,6 +180,7 @@ function set_update_status_called_flag() {
 function nagflux_update_status() {
     systemctl status nagflux.service || clear_flag influxdb_configured
     grep '^process_performance_data=0' /etc/nagios3/nagios.cfg && clear_flag nagios_configured
+    status-set active
     clear_flag update_status_called
 }
 
