@@ -7,3 +7,7 @@ options:
 
         This option is intended as an alternative to adding a relation between
         this charm and the influxdb charm.
+  influxdb_database:
+    type: string
+    default: "nagflux"
+    description: Name of the InfluxDB database to use.

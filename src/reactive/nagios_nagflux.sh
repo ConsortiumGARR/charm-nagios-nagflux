@@ -56,6 +56,7 @@ function set_influxdb_configuration_changed_flag() {
 @when_any influxdb-api.available config.set.external_influxdb_address
 function configure-nagflux() {
     INFLUXDB_HOST_URL="$(config-get external_influxdb_address)"
+    INFLUXDB_DATABASE="$(config-get influxdb_database)"
     
     if [ -z "$INFLUXDB_HOST_URL" ]; then
         if ! relation-get hostname; then
@@ -114,19 +115,13 @@ function configure-nagflux() {
     NastyStringToReplace = ""
     HostcheckAlias = "hostcheck"
 
-[InfluxDB "nagflux"]
+[InfluxDB "${INFLUXDB_DATABASE}"]
     Enabled = true
     Version = 1.0
     Address = "${INFLUXDB_HOST_URL}"
-    Arguments = "precision=ms&db=nagflux"
+    Arguments = "precision=ms&db=${INFLUXDB_DATABASE}"
     StopPullingDataIfDown = true
 
-[InfluxDB "fast"]
-    Enabled = false
-    Version = 1.0
-    Address = "${INFLUXDB_HOST_URL}"
-    Arguments = "precision=ms&db=fast"
-    StopPullingDataIfDown = false
 EOF
     systemctl restart nagflux.service
     set_flag influxdb_configured
